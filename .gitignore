@@ -1,0 +1,3 @@
+huggingface_tokenizers_cache/
+unsloth_compiled_cache/
+__pycache__/
