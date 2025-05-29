@@ -86,7 +86,7 @@ class SteeredModel():
     
     def train(self, examples, num_vectors):
         self.num_vectors = num_vectors
-        self.learned_vectors = torch.zeros(self.num_vectors, self.width, device=self.model.device)
+        self.learned_vectors = torch.zeros(self.num_vectors, self.width, device=self.model.device, dtype=torch.float16)
 
         num_steps = self.num_steps
         orthogonal_vectors = self.orthogonal_vectors
@@ -119,7 +119,7 @@ class SteeredModel():
                 if self.orthogonal_vectors:
                     bias.data = normalization*nn.functional.normalize(
                         project_orthogonal_subspace(
-                            torch.randn(self.width, device="cuda"), self.learned_vectors, self.normalization
+                            torch.randn(self.width, device="cuda", dtype=self.learned_vectors.dtype), self.learned_vectors, self.normalization
                         ), 
                         dim=0
                     )
@@ -163,7 +163,6 @@ class SteeredModel():
                     bias.grad -= torch.dot(
                         bias.grad, bias
                     ) * bias / (normalization**2)
-
                 # step
                 optimizer.step()
 

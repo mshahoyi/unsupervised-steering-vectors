@@ -21,6 +21,7 @@ SAVE_DIR = "/home"
 
 # %%
 import torch
+
 max_seq_length = 2048 # Choose any! We auto support RoPE Scaling internally!
 dtype = None # None for auto detection. Float16 for Tesla T4, V100, Bfloat16 for Ampere+
 load_in_4bit = True # Use 4bit quantization to reduce memory usage. Can be False.
@@ -35,14 +36,25 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 )
 
 # %%
+from peft import prepare_model_for_kbit_training
+
+model = prepare_model_for_kbit_training(model)
+
+# %%
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.unsupervised_steering import SteeredModel
+import src.unsupervised_steering as us
 
-randomly_steered_model = SteeredModel(
+def reload_steering_module():
+    import importlib
+    importlib.reload(us)
+
+reload_steering_module()
+
+randomly_steered_model = us.SteeredModel(
     model,
     tokenizer,
     source_layer_idx = SOURCE_LAYER,
@@ -118,7 +130,8 @@ df.coh_random_steering.hist()
 df.coh_random_steering.mean()
 
 # %%
-steered_model = SteeredModel(
+reload_steering_module()
+steered_model = us.SteeredModel(
     model,
     tokenizer,
     source_layer_idx = SOURCE_LAYER,
@@ -126,24 +139,22 @@ steered_model = SteeredModel(
     target_token_idxs = TOKEN_IDXS,
     normalization = NORMALIZATION,
     orthogonal_vectors = ORTHOGONAL_VECTORS,
+    # num_steps = 2,
     num_steps = NUM_STEPS,
     power = POWER,
     q = POWERQ,
     layers_name='model.layers'
 )
 
-# Make sure the model is in training mode and gradients are enabled
-model.train()
-for param in model.parameters():
-    param.requires_grad_(True)
-
 import torch
 if TORCH_SEED is not None:
     torch.manual_seed(TORCH_SEED)
-steered_model.train([prompt_conv], NUM_VECTORS)
-
-# %%
-
+steered_model.train([prompt_conv], 1)
+# steered_model.train([prompt_conv], NUM_VECTORS)
 
 
 # %%
+# del steered_model
+import gc
+gc.collect()
+torch.cuda.empty_cache()
