@@ -106,6 +106,8 @@ if TORCH_SEED is not None:
 randomly_steered_model.train([prompt_conv], NUM_VECTORS)
 
 #%%
+from tqdm import tqdm
+import pandas as pd
 import torch
 import matplotlib.pyplot as plt
 
@@ -358,16 +360,16 @@ plt.tight_layout()
 plt.show()
 
 #%%
-df = pd.DataFrame(random_vector_completions, columns=["coh_random_steering_results"])
-df.coh_random_steering_results.str[-1]
+# df = pd.DataFrame(random_vector_completions, columns=["coh_random_steering_results"])
+# df.coh_random_steering_results.str[-1]
 
-#%%
-df['coh_random_steering'] = df['coh_random_steering_results'].apply(lambda x: float(x[-1]) if x[-1].isdigit() else float('nan'))
-df.coh_random_steering.info()
+# #%%
+# df['coh_random_steering'] = df['coh_random_steering_results'].apply(lambda x: float(x[-1]) if x[-1].isdigit() else float('nan'))
+# df.coh_random_steering.info()
 
-# %%
-df.coh_random_steering.hist()
-df.coh_random_steering.mean()
+# # %%
+# df.coh_random_steering.hist()
+# df.coh_random_steering.mean()
 
 # %%
 reload_steering_module()
@@ -379,8 +381,8 @@ steered_model = us.SteeredModel(
     target_token_idxs = TOKEN_IDXS,
     normalization = NORMALIZATION,
     orthogonal_vectors = ORTHOGONAL_VECTORS,
-    # num_steps = 2,
-    num_steps = NUM_STEPS,
+    num_steps = 100,
+    # num_steps = NUM_STEPS,
     power = POWER,
     q = POWERQ,
     layers_name='model.layers'
@@ -389,7 +391,7 @@ steered_model = us.SteeredModel(
 import torch
 if TORCH_SEED is not None:
     torch.manual_seed(TORCH_SEED)
-steered_model.train([prompt_conv], 1)
+steered_model.train([prompt_conv], 10)
 # steered_model.train([prompt_conv], NUM_VECTORS)
 
 
