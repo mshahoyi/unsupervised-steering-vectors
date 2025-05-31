@@ -38,7 +38,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 # %%
 from peft import prepare_model_for_kbit_training
 
-# model = prepare_model_for_kbit_training(model)
+model = prepare_model_for_kbit_training(model)
 
 # %%
 import sys
@@ -391,7 +391,7 @@ steered_model = us.SteeredModel(
 import torch
 if TORCH_SEED is not None:
     torch.manual_seed(TORCH_SEED)
-steered_model.train([prompt_conv], 10)
+steered_model.train([prompt_conv], 1)
 # steered_model.train([prompt_conv], NUM_VECTORS)
 
 

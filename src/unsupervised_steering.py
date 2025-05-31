@@ -78,7 +78,7 @@ class SteeredModel():
         
         # set bias
         rgetattr(rgetattr(self.model, f"{self.layers_name}")[self.source_layer_idx], self.source_module_name).bias = nn.Parameter(
-            torch.zeros(self.width, device=self.model.device)
+            torch.zeros(self.width, device=self.model.device, dtype=torch.float16)
         )
         self.bias = rgetattr(rgetattr(self.model, f"{self.layers_name}")[self.source_layer_idx], self.source_module_name).bias
         pass
@@ -100,7 +100,8 @@ class SteeredModel():
             model_inputs = self.tokenizer([examples[i]], return_tensors="pt", padding=False).to(self.model.device)
             with torch.no_grad():
                 if self.target_module == "residual":
-                    hidden_states = self.model(model_inputs["input_ids"], output_hidden_states=True).hidden_states
+                    with torch.amp.autocast("cuda", dtype=torch.float16):
+                        hidden_states = self.model(model_inputs["input_ids"], output_hidden_states=True).hidden_states
                 elif self.target_module == "attn":
                     hidden_states = self.model(model_inputs["input_ids"], output_attentions=True).attentions
                 else:
@@ -139,12 +140,13 @@ class SteeredModel():
                     model_inputs = self.tokenizer([examples[s]], return_tensors="pt", padding=False).to(self.model.device)
     
                     # compute steered target
-                    if self.target_module == "residual":
-                        hidden_states = self.model(model_inputs["input_ids"], output_hidden_states=True).hidden_states
-                    elif self.target_module == "attn":
-                        hidden_states = self.model(model_inputs["input_ids"], output_attentions=True).attentions
-                    else:
-                        raise ValueError("target_module must be 'residual' or 'attn'")
+                    with torch.amp.autocast("cuda", dtype=torch.float16):
+                        if self.target_module == "residual":
+                            hidden_states = self.model(model_inputs["input_ids"], output_hidden_states=True).hidden_states
+                        elif self.target_module == "attn":
+                                hidden_states = self.model(model_inputs["input_ids"], output_attentions=True).attentions
+                        else:
+                            raise ValueError("target_module must be 'residual' or 'attn'")
                     target = hidden_states[self.target_layer_idx][:, self.target_token_idxs, :]
                     loss = -(target-self.unsteered_targets[s]).norm(dim=1).pow(power).sum().pow(1/self.q)
                     loss.backward()
@@ -182,6 +184,10 @@ class SteeredModel():
             with torch.no_grad():
                 self.learned_vectors[i,:] = bias.data.detach()
             losses_all.append(losses)
+
+            import gc
+            torch.cuda.empty_cache()
+            gc.collect()
             
         self.losses_all = losses_all
         pass
