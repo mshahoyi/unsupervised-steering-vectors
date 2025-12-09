@@ -105,7 +105,7 @@ class SteeredModel():
                     hidden_states = self.model(model_inputs["input_ids"], output_attentions=True).attentions
                 else:
                     raise ValueError("target_module must be 'residual' or 'attn'")
-                self.unsteered_targets.append(hidden_states[self.target_layer_idx][:, self.target_token_idxs, :])
+                self.unsteered_targets.append(hidden_states[self.target_layer_idx+1][:, self.target_token_idxs, :])
 
         
         # loop over vectors
@@ -145,8 +145,8 @@ class SteeredModel():
                         hidden_states = self.model(model_inputs["input_ids"], output_attentions=True).attentions
                     else:
                         raise ValueError("target_module must be 'residual' or 'attn'")
-                    target = hidden_states[self.target_layer_idx][:, self.target_token_idxs, :]
-                    loss = -(target-self.unsteered_targets[s]).norm(dim=1).pow(power).sum().pow(1/self.q)
+                    target = hidden_states[self.target_layer_idx+1][:, self.target_token_idxs, :]
+                    loss = -(target-self.unsteered_targets[s]).norm(dim=-1).pow(power).sum().pow(1/self.q)
                     loss.backward()
                 
                 # project gradient to subspace orthogonal to previous learned vectors (if orthogonal_vectors is True)
